@@ -2,7 +2,8 @@ var $ = require('cheerio');
 var request = require('request')
 
 var SLACK_ENDPOINTS = [
-'***REMOVED***',
+	'***REMOVED***',
+	'***REMOVED***'
 ];
 
 var SCHEDULE_URL = 'http://bellevue.com/food-truck.php';
