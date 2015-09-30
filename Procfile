@@ -1,1 +1,0 @@
-web: echo "Error: no web"
