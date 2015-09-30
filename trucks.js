@@ -2,8 +2,7 @@ var $ = require('cheerio');
 var request = require('request')
 
 var SLACK_ENDPOINTS = [
-	'***REMOVED***',
-	'***REMOVED***',
+'***REMOVED***',
 ];
 
 var SCHEDULE_URL = 'http://bellevue.com/food-truck.php';
@@ -30,7 +29,13 @@ request(SCHEDULE_URL, function(err, schedule_resp, html) {
 	var parsedHTML = $.load(html)
 	var link = parsedHTML('a[name=' + day + ']');
 	var truck_cells = link.parent().parent().next().find('tr').eq(1).find('td');
-	var attachments = truck_cells.map(function(i, el) { return { image_url: 'http://bellevue.com/' + $(el).find('img').attr('src'), title: $(el).find('strong').text() }; }).get();
+	var attachments = truck_cells.map(function(i, el) {
+		return {
+			thumb_url: 'http://bellevue.com/' + $(el).find('img').attr('src'),
+			title: $(el).find('strong').text(),
+			title_link: 'http://bellevue.com/' + $(el).find('a').attr('href')
+		}
+	}).get();
 
 	attachments.sort(function(a, b) {
 	  	if (a.title < b.title)
@@ -41,6 +46,7 @@ request(SCHEDULE_URL, function(err, schedule_resp, html) {
 	});
 
 	var message = {
+		text: "*Food trucks* in front of Barnes & Noble today (*" + day + "*), according to <http://bellevue.com/food-truck.php|bellevue.com>",
 		attachments: attachments,
 	};
 
