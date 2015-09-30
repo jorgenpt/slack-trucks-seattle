@@ -33,7 +33,6 @@ request(SCHEDULE_URL, function(err, schedule_resp, html) {
 	});
 
 	var message = {
-		channel: req.query.channel_name,
 		attachments: attachments,
 	};
 
