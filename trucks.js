@@ -2,9 +2,13 @@ var $ = require('cheerio');
 var request = require('request')
 
 var SLACK_ENDPOINTS = [
-	'***REMOVED***',
-	'***REMOVED***'
+	'***REMOVED***', // Uber
+	'***REMOVED***', // EnvelopVR
+	'***REMOVED***', // Epic Games
 ];
+
+if (false)
+	SLACK_ENDPOINTS = ['***REMOVED***']; // Testing.
 
 var SCHEDULE_URL = 'http://bellevue.com/food-truck.php';
 
@@ -47,8 +51,16 @@ request(SCHEDULE_URL, function(err, schedule_resp, html) {
 	});
 
 	var message = {
-		text: "*Food trucks* in front of Barnes & Noble today (*" + day + "*), according to <http://bellevue.com/food-truck.php|bellevue.com>",
+		icon_emoji: ':truck:',
+		username: 'trucks',
+		text: ":bell: *Food trucks* in front of Barnes & Noble today (*" + day + "*), according to <http://bellevue.com/food-truck.php|bellevue.com>",
 		attachments: attachments,
+	};
+
+	var summaryMessage = {
+		icon_emoji: ':truck:',
+		username: 'trucks',
+		text: "(Feedback &amp; feature requests can be directed to Jørgen Tjernø <mailto:jorgenpt@gmail.com|&lt;jorgenpt@gmail.com&gt;>)"
 	};
 
 	for (var i = 0; i < SLACK_ENDPOINTS.length; ++i)
@@ -58,7 +70,11 @@ request(SCHEDULE_URL, function(err, schedule_resp, html) {
 			if (err)
 				console.error("Failed to submit to " + endpoint + ": ", message, err);
 			else
-				console.log("Submitted trucks to " + endpoint + ": ", message);
+			{
+				request.post({ uri: endpoint, json: true, body: summaryMessage }, function(err, slack_resp, html) {
+					console.log("Submitted trucks to " + endpoint + ": ", message);
+				});
+			}
 		});
 	}
 });
