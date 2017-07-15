@@ -18,6 +18,16 @@ app.get('/bellevue/:day', function(req, response, next) {
 	});
 });
 
+app.get('/occidental/:year/:month/:day', function(req, response, next) {
+	trucks.fetchOccidentalParkTrucks(new Date(req.params.year, (req.params.month | 0) - 1, req.params.day), function(err, messages)
+	{
+		if (err)
+			next(err);
+		else
+			response.send(messages);
+	});
+});
+
 app.listen(app.get('port'), function() {
 	console.log('Node app is running on port', app.get('port'));
 });

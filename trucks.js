@@ -1,14 +1,23 @@
-var $ = require('cheerio');
-var request = require('request')
+const $ = require('cheerio');
+const request = require('request')
+const querystring = require('querystring');
+const util = require('util');
 
-var SLACK_ENDPOINTS = [
+var BELLEVUE_SLACK_ENDPOINTS = [
 	'***REMOVED***', // Uber
 	'***REMOVED***', // EnvelopVR
 	'***REMOVED***', // Epic Games
 ];
 
+var OCCIDENTAL_SLACK_ENDPOINTS = [
+	'***REMOVED***', // Undead Labs
+];
+
 if (false)
-	SLACK_ENDPOINTS = ['***REMOVED***']; // Testing.
+{
+	BELLEVUE_SLACK_ENDPOINTS = ['***REMOVED***']; // Testing.
+	OCCIDENTAL_SLACK_ENDPOINTS = BELLEVUE_SLACK_ENDPOINTS;
+}
 
 var getMessage = function(body)
 {
@@ -22,20 +31,30 @@ var getMessage = function(body)
 	return base;
 };
 
-var processRequestQueue = function(endpoint, queue)
+var processRequestQueue = function(endpoint, queue, callback)
 {
 	if (queue.length < 1)
 	{
 		console.log("Submitted full queue to " + endpoint);
+		if (callback)
+		{
+			callback(null);
+		}
 		return;
 	}
 
 	var message = queue.shift();
 	request.post({ uri: endpoint, json: true, body: message }, function(err, slack_resp, html) {
 		if (err)
+		{
 			console.error("Failed to submit to " + endpoint + ": ", message, err);
+			if (callback)
+			{
+				callback(err);
+			}
+		}
 		else
-			processRequestQueue(endpoint, queue);
+			processRequestQueue(endpoint, queue, callback);
 	});
 };
 
@@ -51,7 +70,10 @@ var fetchBellevueTrucks = function(dayOfWeek, callback)
 	};
 
 	if (!(dayOfWeek in DAY_MAPPING))
+	{
+		callback(null, []);
 		return;
+	}
 
 	var day = DAY_MAPPING[dayOfWeek];
 	request(BELLEVUE_SCHEDULE_URL, function(err, schedule_resp, html) {
@@ -88,21 +110,134 @@ var fetchBellevueTrucks = function(dayOfWeek, callback)
 	});
 };
 
+var formatApiDate = function(date)
+{
+    var formattedYear = date.getFullYear().toString().slice(-2);
+    return util.format('%s-%s-%s', date.getMonth() + 1, date.getDate(), formattedYear);
+};
+
+var formatDate = function(date)
+{
+	var formattedDate = ('0' + date.getDate()).slice(-2);
+	var formattedMonth = ('0' + (date.getMonth() + 1)).slice(-2);
+    return util.format('%i-%s-%s', date.getFullYear(), formattedMonth, formattedDate);
+
+};
+
+var fetchOccidentalParkTrucks = function(date, callback) {
+	var EMOJI_MAP = {
+		'snout-and-co': ':pig_nose:',
+		'seattle-chicken-over-rice': ':chicken::rice:',
+		'bomba-fusion': ':boom:',
+	};
+
+	var IMAGE_BASE = 'https://s3-us-west-2.amazonaws.com/seattlefoodtruck-uploads-prod/';
+	var TRUCK_BASE = 'https://www.seattlefoodtruck.com/food-trucks/';
+	var OCCIDENTAL_PARK_LOCATION_ID = 39;
+	var OCCIDENTAL_PARK_SCHEDULE_URL = 'https://www.seattlefoodtruck.com/api/events';
+
+	var tomorrow = new Date(date.getTime());
+	tomorrow.setDate(tomorrow.getDate() + 1);
+
+	var params = {
+		page_size: 300,
+		page: 1,
+		with_active_trucks: true,
+		include_bookings: true,
+		with_booking_status: 'approved',
+		for_locations: OCCIDENTAL_PARK_LOCATION_ID,
+		start_date: formatApiDate(date),
+		end_date: formatApiDate(tomorrow)
+	};
+
+	var url = OCCIDENTAL_PARK_SCHEDULE_URL + '?' + querystring.stringify(params);
+	request({url: url, json: true}, function(err, schedule_resp, result) {
+		if (err) {
+			callback(err, null);
+			return;
+		}
+
+		var trucks = [];
+		result.events.forEach(function(event) {
+			event.bookings.forEach(function(booking) {
+				var title = booking.truck.name;
+				if (booking.truck.id in EMOJI_MAP)
+				{
+					title = util.format('%s %s', EMOJI_MAP[booking.truck.id], title);
+				}
+
+				var attachment = {
+					title: title,
+					title_link: TRUCK_BASE + booking.truck.id
+				};
+
+				if (booking.truck.featured_photo)
+				{
+					attachment.thumb_url = IMAGE_BASE + booking.truck.featured_photo;
+				}
+				trucks.push(attachment);
+			});
+		});
+
+		if (trucks.length > 0)
+		{
+			var messages = [getMessage({ text: ":bell: *Food trucks* in Occidental Park today (*" + formatDate(date) + "*), according to <https://www.seattlefoodtruck.com/schedule/occidental-park|seattlefoodtruck.com>" })];
+			trucks.forEach(function(attachment) {
+		 		messages.push(getMessage({ attachments: [attachment] }));
+			});
+			messages.push(getMessage({ text: "(Feedback &amp; feature requests can be directed to Jørgen Tjernø <mailto:jorgenpt@gmail.com|&lt;jorgenpt@gmail.com&gt;>)" }));
+
+			callback(null, messages);
+		}
+		else
+		{
+			callback(null, []);
+		}
+
+	});
+};
+
 module.exports = {
 	fetchBellevueTrucks: fetchBellevueTrucks,
+	fetchOccidentalParkTrucks: fetchOccidentalParkTrucks,
 };
 
 if (require.main == module)
 {
-	fetchBellevueTrucks(new Date().getDay(), function(err, messages) {
+	var date = new Date();
+	fetchBellevueTrucks(date.getDay(), function(err, messages) {
+		var occidentalTrucks = function(err)
+		{
+		};
+
 		if (err)
 		{
 			console.error("Failed to load " + BELLEVUE_SCHEDULE_URL + ": ", err);
 		}
+		else if (messages.length > 0)
+		{
+			for (var i = 0; i < BELLEVUE_SLACK_ENDPOINTS.length; ++i)
+				processRequestQueue(BELLEVUE_SLACK_ENDPOINTS[i], messages.slice());
+		}
 		else
 		{
-			for (var i = 0; i < SLACK_ENDPOINTS.length; ++i)
-				processRequestQueue(SLACK_ENDPOINTS[i], messages.slice());
+			console.log("No Bellevue trucks for ", date);
+		}
+	});
+
+	fetchOccidentalParkTrucks(date, function(err, messages) {
+		if (err)
+		{
+			console.error("Failed to load Occidental Park schedule: ", err);
+		}
+		else if (messages.length > 0)
+		{
+			for (var i = 0; i < OCCIDENTAL_SLACK_ENDPOINTS.length; ++i)
+				processRequestQueue(OCCIDENTAL_SLACK_ENDPOINTS[i], messages.slice());
+		}
+		else
+		{
+			console.log("No Occidental Park trucks for ", date);
 		}
 	});
 }
