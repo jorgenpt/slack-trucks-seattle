@@ -8,7 +8,7 @@ var SLACK_ENDPOINTS = [
 ];
 
 if (false)
-	SLACK_ENDPOINTS = ['***REMOVED***', '***REMOVED***']; // Testing.
+	SLACK_ENDPOINTS = ['***REMOVED***']; // Testing.
 
 var SCHEDULE_URL = 'http://bellevue.com/food-truck.php';
 
