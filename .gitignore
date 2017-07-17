@@ -1,6 +1,9 @@
+# Heroku
 node_modules
 .env
 Dockerfile
 docker-compose.yml
-slack_endpoints.env
+
+# slack-trucks
+config.env
 test_trucks.sh
