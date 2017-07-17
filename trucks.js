@@ -3,28 +3,38 @@ const request = require('request')
 const querystring = require('querystring');
 const util = require('util');
 
+var argv = require('minimist')(process.argv.slice(2));
+
 var endpoints = {
 	bellevue: [],
 	occidental: []
 };
 
-const ENDPOINT_PREFIX = 'TRUCKS_';
-Object.keys(process.env).forEach(function(envVar) {
-	if (envVar.startsWith(ENDPOINT_PREFIX))
-	{
-		var components = envVar.slice(ENDPOINT_PREFIX.length).split('_', 2);
-		if (components.length != 2)
+if (argv.test)
+{
+	endpoints.bellevue.push(argv.test);
+	endpoints.occidental.push(argv.test);
+}
+else
+{
+	const ENDPOINT_PREFIX = 'TRUCKS_';
+	Object.keys(process.env).forEach(function(envVar) {
+		if (envVar.startsWith(ENDPOINT_PREFIX))
 		{
-			return;
-		}
+			var components = envVar.slice(ENDPOINT_PREFIX.length).split('_', 2);
+			if (components.length != 2)
+			{
+				return;
+			}
 
-		var location = components[0].toLowerCase();
-		if (location in endpoints)
-		{
-			endpoints[location].push(process.env[envVar]);
+			var location = components[0].toLowerCase();
+			if (location in endpoints)
+			{
+				endpoints[location].push(process.env[envVar]);
+			}
 		}
-	}
-});
+	});
+}
 
 var getMessage = function(body)
 {
@@ -212,6 +222,11 @@ module.exports = {
 if (require.main == module)
 {
 	var date = new Date();
+	if (argv.date)
+	{
+		date = new Date(argv.date);
+	}
+
 	fetchBellevueTrucks(date.getDay(), function(err, messages) {
 		if (err)
 		{
