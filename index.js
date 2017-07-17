@@ -5,7 +5,19 @@ var trucks = require('./trucks');
 var app = express();
 app.set('port', (process.env.PORT || 5000));
 app.get('/', function(req, response) {
-	return response.sendStatus(401);
+	response.sendStatus(401);
+});
+
+app.get('/debug/:secret/endpoints', function(req, response, next) {
+	console.log(process.env.DEBUG_SECRET, req.params.secret);
+    if (process.env.DEBUG_SECRET && req.params.secret == process.env.DEBUG_SECRET)
+    {
+        response.send(trucks.endpoints);
+    }
+    else
+    {
+		response.sendStatus(401);
+    }
 });
 
 app.get('/bellevue/:day', function(req, response, next) {

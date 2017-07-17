@@ -6,14 +6,14 @@ const util = require('util');
 var argv = require('minimist')(process.argv.slice(2));
 
 var endpoints = {
-	bellevue: [],
-	occidental: []
+	bellevue: {},
+	occidental: {}
 };
 
 if (argv.test)
 {
-	endpoints.bellevue.push(argv.test);
-	endpoints.occidental.push(argv.test);
+	endpoints.bellevue.test = argv.test;
+	endpoints.occidental.test = argv.test;
 }
 else
 {
@@ -28,9 +28,10 @@ else
 			}
 
 			var location = components[0].toLowerCase();
+			var name = components[1].toLowerCase();
 			if (location in endpoints)
 			{
-				endpoints[location].push(process.env[envVar]);
+				endpoints[location][name] = process.env[envVar];
 			}
 		}
 	});
@@ -217,6 +218,7 @@ var fetchOccidentalParkTrucks = function(date, callback) {
 module.exports = {
 	fetchBellevueTrucks: fetchBellevueTrucks,
 	fetchOccidentalParkTrucks: fetchOccidentalParkTrucks,
+	endpoints: endpoints
 };
 
 if (require.main == module)
@@ -234,8 +236,9 @@ if (require.main == module)
 		}
 		else if (messages.length > 0)
 		{
-			for (var i = 0; i < endpoints.bellevue.length; ++i)
-				processRequestQueue(endpoints.bellevue[i], messages.slice());
+			var bellevueEndpoints = Object.values(endpoints.bellevue);
+			for (var i = 0; i < bellevueEndpoints.length; ++i)
+				processRequestQueue(bellevueEndpoints[i], messages.slice());
 		}
 		else
 		{
@@ -250,8 +253,9 @@ if (require.main == module)
 		}
 		else if (messages.length > 0)
 		{
-			for (var i = 0; i < endpoints.occidental.length; ++i)
-				processRequestQueue(endpoints.occidental[i], messages.slice());
+			var occidentalEndpoints = Object.values(endpoints.occidental);
+			for (var i = 0; i < occidentalEndpoints.length; ++i)
+				processRequestQueue(occidentalEndpoints[i], messages.slice());
 		}
 		else
 		{
