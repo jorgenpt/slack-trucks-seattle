@@ -3,21 +3,28 @@ const request = require('request')
 const querystring = require('querystring');
 const util = require('util');
 
-var BELLEVUE_SLACK_ENDPOINTS = [
-	'***REMOVED***', // Uber
-	'***REMOVED***', // EnvelopVR
-	'***REMOVED***', // Epic Games
-];
+var endpoints = {
+	bellevue: [],
+	occidental: []
+};
 
-var OCCIDENTAL_SLACK_ENDPOINTS = [
-	'***REMOVED***', // Undead Labs
-];
+const ENDPOINT_PREFIX = 'TRUCKS_';
+Object.keys(process.env).forEach(function(envVar) {
+	if (envVar.startsWith(ENDPOINT_PREFIX))
+	{
+		var components = envVar.slice(ENDPOINT_PREFIX.length).split('_', 2);
+		if (components.length != 2)
+		{
+			return;
+		}
 
-if (false)
-{
-	BELLEVUE_SLACK_ENDPOINTS = ['***REMOVED***']; // Testing.
-	OCCIDENTAL_SLACK_ENDPOINTS = BELLEVUE_SLACK_ENDPOINTS;
-}
+		var location = components[0].toLowerCase();
+		if (location in endpoints)
+		{
+			endpoints[location].push(process.env[envVar]);
+		}
+	}
+});
 
 var getMessage = function(body)
 {
@@ -58,7 +65,7 @@ var processRequestQueue = function(endpoint, queue, callback)
 	});
 };
 
-var BELLEVUE_SCHEDULE_URL = 'http://bellevue.com/food-truck.php';
+const BELLEVUE_SCHEDULE_URL = 'http://bellevue.com/food-truck.php';
 var fetchBellevueTrucks = function(dayOfWeek, callback)
 {
 	var DAY_MAPPING = {
@@ -206,18 +213,14 @@ if (require.main == module)
 {
 	var date = new Date();
 	fetchBellevueTrucks(date.getDay(), function(err, messages) {
-		var occidentalTrucks = function(err)
-		{
-		};
-
 		if (err)
 		{
 			console.error("Failed to load " + BELLEVUE_SCHEDULE_URL + ": ", err);
 		}
 		else if (messages.length > 0)
 		{
-			for (var i = 0; i < BELLEVUE_SLACK_ENDPOINTS.length; ++i)
-				processRequestQueue(BELLEVUE_SLACK_ENDPOINTS[i], messages.slice());
+			for (var i = 0; i < endpoints.bellevue.length; ++i)
+				processRequestQueue(endpoints.bellevue[i], messages.slice());
 		}
 		else
 		{
@@ -232,8 +235,8 @@ if (require.main == module)
 		}
 		else if (messages.length > 0)
 		{
-			for (var i = 0; i < OCCIDENTAL_SLACK_ENDPOINTS.length; ++i)
-				processRequestQueue(OCCIDENTAL_SLACK_ENDPOINTS[i], messages.slice());
+			for (var i = 0; i < endpoints.occidental.length; ++i)
+				processRequestQueue(endpoints.occidental[i], messages.slice());
 		}
 		else
 		{
