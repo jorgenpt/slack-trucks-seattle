@@ -10,7 +10,7 @@
     "cheerio": "0.22.0",
     "express": "4.15.3",
     "request": "2.81.0",
-    "minimist": "1.2.0"
+    "minimist": "1.2.3"
   },
   "engines": {
     "node": "8.1.4"
